@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitor de Sismos</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .card { background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ddd; }
+        h1 { color: #2c3e50; }
+        h2 { color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        .stat { font-size: 1.2em; margin: 10px 0; }
+        .number { font-weight: bold; color: #e74c3c; }
+        ul { list-style-type: none; padding: 0; }
+        li { padding: 5px 0; border-bottom: 1px solid #eee; }
+        .links a { display: block; margin: 10px 0; padding: 10px; background: #3498db; color: white; text-decoration: none; border-radius: 5px; text-align: center;}
+        .links a:hover { background: #2980b9; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>📊 Tablero de Minería de Datos Sísmicos</h1>
+        <p>Análisis en tiempo real de datos USGS</p>
+    </header>
+
+    <div class="card">
+        <h2>Resumen Global</h2>
+        <p class="stat">Total de sismos analizados: <span class="number">{{ total }}</span></p>
+        <p class="stat">Magnitud Promedio: <span class="number">{{ promedio }}</span></p>
+        <p class="stat">Magnitud Máxima Registrada: <span class="number">{{ maximo }}</span></p>
+    </div>
+
+    <div class="card">
+        <h2>📍 Top Regiones más Activas</h2>
+        {% if regiones %}
+            <ul>
+            {% for lugar, cantidad in regiones.items() %}
+                <li><strong>{{ lugar }}</strong>: {{ cantidad }} sismos</li>
+            {% endfor %}
+            </ul>
+        {% else %}
+            <p>No hay datos de regiones disponibles.</p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h2>📈 Visualizaciones y Modelos</h2>
+        <div class="links">
+            <a href="/grafico/magnitudes">Ver Histograma de Magnitudes</a>
+            <a href="/grafico/correlacion">Ver Correlación (Scatterplot & Heatmap)</a>
+            <a href="/comparacion/continentes">Ver Comparación Regional</a>
+            <a href="/mapa/mundial">🌍 Ver Mapa Mundial Interactivo</a>
+            <a href="/modelos">🧠 Ver Modelos Predictivos (Etapa 4)</a>
+        </div>
+    </div>
+
+</body>
+</html>

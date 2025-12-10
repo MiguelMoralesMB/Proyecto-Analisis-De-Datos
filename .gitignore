@@ -1,4 +1,4 @@
 #Ingnorar archivos CSV
 *.CSV
 *.parquet
-env/
+env/    
