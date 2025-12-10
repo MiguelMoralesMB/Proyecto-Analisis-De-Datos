@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ titulo }}</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 20px; background-color: #f4f4f9; }
+        h1 { color: #333; margin-bottom: 30px; }
+        
+        /* Contenedor para las imágenes */
+        .gallery {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        /* Estilo de cada tarjeta de imagen */
+        .image-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-width: 90%;
+            width: 600px; /* Ancho máximo para que no se vean gigantes */
+        }
+
+        img {
+            width: 100%;
+            height: auto;
+            border-radius: 4px;
+        }
+
+        .btn-back {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+        .btn-back:hover { background-color: #2980b9; }
+    </style>
+</head>
+<body>
+
+    <h1>{{ titulo }}</h1>
+
+    <div class="gallery">
+        <div class="image-card">
+            <h3>Gráfico de Dispersión</h3>
+            <p>Relación entre Profundidad y Magnitud</p>
+            <img src="{{ img1 }}" alt="Scatterplot">
+        </div>
+
+        <div class="image-card">
+            <h3>Matriz de Correlación</h3>
+            <p>Mapa de calor de variables numéricas</p>
+            <img src="{{ img2 }}" alt="Heatmap">
+        </div>
+    </div>
+
+    <a href="/" class="btn-back">⬅ Volver al Tablero</a>
+
+</body>
+</html>

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mapa Leaflet</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>#map { height: 600px; width: 100%; }</style>
+</head>
+<body>
+    <h1>Mapa Leaflet (Consumiendo API Flask)</h1>
+    <div id="map"></div>
+    <a href="/">Volver</a>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        var map = L.map('map').setView([0, 0], 2);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+        // Consumir API creada en app.py
+        fetch('/api/datos_sismos')
+            .then(res => res.json())
+            .then(data => {
+                data.forEach(s => {
+                    L.circleMarker([s.latitude, s.longitude], {
+                        color: 'red', radius: s.mag * 1.5, fillOpacity: 0.5
+                    }).bindPopup(`<b>${s.place}</b><br>Mag: ${s.mag}`).addTo(map);
+                });
+            });
+    </script>
+</body>
+</html>

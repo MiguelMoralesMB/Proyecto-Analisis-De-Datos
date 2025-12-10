@@ -1,86 +1,88 @@
 import matplotlib
-matplotlib.use('Agg') # Modo "sin ventana" para servidores webs
+matplotlib.use('Agg') # CRÍTICO: Backend no interactivo para Flask
 import matplotlib.pyplot as plt
 import seaborn as sns
 import io
 import base64
 import folium
-from analisis import cargar_datos
+import plotly.express as px
+import plotly.io as pio
+import analisis # Importamos para pedir los datos
 
-# Configuración de estilo
 sns.set_theme(style="whitegrid")
 
 def codificar_grafico(fig):
-    """Convierte una figura de Matplotlib a string Base64 para HTML."""
+    """Helper para convertir Matplotlib a Base64."""
     buf = io.BytesIO()
     fig.savefig(buf, format='png', bbox_inches='tight')
-    plt.close(fig) # Cierra la figura para liberar memoria RAM
+    plt.close(fig)
     buf.seek(0)
     data = base64.b64encode(buf.read()).decode("ascii")
     return f"data:image/png;base64,{data}"
 
 # --- GRÁFICOS ESTÁTICOS ---
-
 def plot_histograma_magnitud():
-    df = cargar_datos()
+    df = analisis.cargar_datos()
+    if df is None: return None
     fig, ax = plt.subplots(figsize=(10, 6))
     sns.histplot(df['mag'], bins=30, kde=True, color='skyblue', ax=ax)
     ax.set_title("Distribución de Magnitudes")
     return codificar_grafico(fig)
 
 def plot_scatter_profundidad_mag():
-    df = cargar_datos()
-    # Tomamos una muestra para que el gráfico no sea una mancha ilegible
-    sample = df.sample(min(len(df), 2000)) 
-    
+    df = analisis.cargar_datos()
+    if df is None: return None
+    sample = df.sample(min(len(df), 2000)) # Muestra para rendimiento
     fig, ax = plt.subplots(figsize=(10, 6))
     sns.scatterplot(data=sample, x='depth', y='mag', alpha=0.5, color='coral', ax=ax)
     ax.set_title("Correlación: Profundidad vs Magnitud")
-    
-    # Añadimos línea de tendencia simple
-    sns.regplot(data=sample, x='depth', y='mag', scatter=False, color='red', ax=ax)
-    return codificar_grafico(fig)
-
-def plot_boxplot_comparativo():
-    """Compara magnitudes entre las top 5 regiones más activas."""
-    df = cargar_datos()
-    top_places = df['place'].value_counts().head(5).index
-    df_filtered = df[df['place'].isin(top_places)]
-
-    fig, ax = plt.subplots(figsize=(12, 6))
-    sns.boxplot(x='place', y='mag', data=df_filtered, palette="Set3", ax=ax)
-    plt.xticks(rotation=45)
-    ax.set_title("Comparación de Magnitudes: Top 5 Regiones")
     return codificar_grafico(fig)
 
 def plot_matriz_correlacion():
-    df = cargar_datos()
+    df = analisis.cargar_datos()
+    if df is None: return None
     cols = ['mag', 'depth', 'latitude', 'longitude']
     corr = df[cols].corr()
-
     fig, ax = plt.subplots(figsize=(8, 6))
     sns.heatmap(corr, annot=True, cmap='coolwarm', ax=ax)
     ax.set_title("Matriz de Correlación")
     return codificar_grafico(fig)
 
-# --- MAPAS INTERACTIVOS (FOLIUM) ---
+def plot_comparacion_continentes():
+    """Boxplot para comparar regiones[cite: 68]."""
+    df = analisis.obtener_datos_con_continentes()
+    if df is None or df.empty: return None
+    
+    fig, ax = plt.subplots(figsize=(12, 6))
+    sns.boxplot(x='continente', y='mag', data=df, palette="Set3", ax=ax)
+    ax.set_title("Distribución de Magnitud por Continente")
+    return codificar_grafico(fig)
 
-def mapa_interactivo():
-    df = cargar_datos()
-    # Centrado en el pacífico
+# --- MAPAS INTERACTIVOS ---
+def mapa_folium():
+    """Genera HTML de mapa Folium[cite: 65]."""
+    df = analisis.cargar_datos()
+    if df is None: return "Sin datos"
+    
     m = folium.Map(location=[0, 0], zoom_start=2)
-
-    # Agregamos solo una muestra de 500 sismos significativos para no colgar el navegador
-    sismos_fuertes = df[df['mag'] > 5.5].sample(min(len(df), 500))
-
-    for _, row in sismos_fuertes.iterrows():
+    sample = df[df['mag'] > 5.0].sample(min(len(df), 300)) # Solo sismos fuertes
+    
+    for _, row in sample.iterrows():
         folium.CircleMarker(
             location=[row['latitude'], row['longitude']],
             radius=row['mag'],
-            popup=f"Lugar: {row['place']}<br>Mag: {row['mag']}",
-            color="crimson",
-            fill=True,
-            fill_opacity=0.7
+            color="red", fill=True, fill_opacity=0.6,
+            popup=f"Mag: {row['mag']}"
         ).add_to(m)
-        
     return m._repr_html_()
+
+def mapa_plotly():
+    """Genera div HTML de mapa Plotly[cite: 66]."""
+    df = analisis.cargar_datos()
+    if df is None: return "<div>Sin datos</div>"
+    
+    sample = df[df['mag'] > 4.5].sample(min(len(df), 500))
+    fig = px.scatter_geo(sample, lat='latitude', lon='longitude', 
+                         color='mag', size='mag', projection="natural earth",
+                         title="Mapa Global (Plotly)", color_continuous_scale="Reds")
+    return pio.to_html(fig, full_html=False)

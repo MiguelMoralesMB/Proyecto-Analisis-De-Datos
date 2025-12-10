@@ -1,136 +1,80 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, jsonify
 import os
 import json
-import analisis          # Tu archivo analisis.py
-import visualizaciones   # Tu archivo visualizaciones.py
+import analisis
+import visualizaciones
 
 app = Flask(__name__)
 
-# --- CONFIGURACIÓN ---
-# Ruta al archivo JSON que genera el ETL
-ARCHIVO_RESUMEN = os.path.join("data", "resumen_estadistico.json")
+# Ruta al JSON generado por el ETL
+RUTA_RESUMEN = os.path.join("data", "resumen_estadistico.json")
 
-def cargar_resumen_json():
-    """
-    Función auxiliar para leer el resumen estadístico generado por etl_limpieza.py.
-    Incluye diagnósticos para saber si falla.
-    """
-    if not os.path.exists(ARCHIVO_RESUMEN):
-        print(f"ERROR CRÍTICO: No encuentro el archivo '{ARCHIVO_RESUMEN}'.")
-        print("SOLUCIÓN: Ejecuta 'python etl_limpieza.py' primero.")
-        return None
-    
+def cargar_resumen():
+    if not os.path.exists(RUTA_RESUMEN): return None
     try:
-        with open(ARCHIVO_RESUMEN, 'r') as f:
-            data = json.load(f)
-            print("✅ JSON cargado correctamente.")
-            return data
-    except Exception as e:
-        print(f"ERROR al leer el JSON: {e}")
-        return None
+        with open(RUTA_RESUMEN, 'r') as f: return json.load(f)
+    except: return None
 
-# =============================================================================
-# RUTA 1: PÁGINA DE INICIO (DASHBOARD)
-# =============================================================================
+# --- HOME ---
 @app.route('/')
 def index():
-    # 1. Cargamos datos del JSON
-    resumen = cargar_resumen_json()
+    resumen = cargar_resumen()
+    # Valores por defecto para evitar errores si no hay JSON
+    if not resumen:
+        return "<h1>⚠️ Error: Ejecuta 'python etl_limpieza.py' primero.</h1>"
+    
+    general = resumen.get('general', {}).get('mag', {})
+    return render_template('index.html',
+                           total=int(float(general.get('count', 0))),
+                           promedio=round(float(general.get('mean', 0)), 2),
+                           maximo=round(float(general.get('max', 0)), 2),
+                           regiones=resumen.get('top_regiones', {}))
 
-    # 2. Si falla la carga, mostramos error en pantalla
-    if resumen is None:
-        return """
-        <div style='color: red; text-align: center; margin-top: 50px;'>
-            <h1>⚠️ Error: Datos no encontrados</h1>
-            <p>El archivo <code>data/resumen_estadistico.json</code> no existe.</p>
-            <p><strong>Solución:</strong> Ve a tu terminal y ejecuta: <code>python etl_limpieza.py</code></p>
-        </div>
-        """
-
-    # 3. Extraemos las variables con seguridad (usando .get para que no rompa si falta algo)
-    # Accedemos a ['general']['mag'] porque así lo guarda el pandas describe()
-    try:
-        stats_mag = resumen.get('general', {}).get('mag', {})
-        total_sismos = int(stats_mag.get('count', 0))
-        promedio_mag = round(float(stats_mag.get('mean', 0)), 2)
-        max_mag = round(float(stats_mag.get('max', 0)), 2)
-        
-        # Datos para gráficos simples en el home (si los usas)
-        top_regiones = resumen.get('top_regiones', {})
-    except Exception as e:
-        print(f"Error procesando datos del JSON: {e}")
-        total_sismos = "Error"
-        promedio_mag = "Error"
-        max_mag = "Error"
-        top_regiones = {}
-
-    # 4. Renderizamos el HTML pasando las variables
-    return render_template('index.html', 
-                           total=total_sismos, 
-                           promedio=promedio_mag,
-                           maximo=max_mag,
-                           regiones=top_regiones)
-
-# =============================================================================
-# ETAPA 3: VISUALIZACIONES (Rutas del PDF)
-# =============================================================================
-
+# --- GRÁFICOS (Etapa 3) ---
 @app.route('/grafico/magnitudes')
 def grafico_magnitudes():
-    # Llama a la función en visualizaciones.py
-    imagen_b64 = visualizaciones.plot_histograma_magnitud()
-    
-    return render_template('grafico_simple.html', 
-                           titulo="Histograma de Magnitudes", 
-                           descripcion="Distribución de la frecuencia de los sismos según su magnitud.",
-                           imagen=imagen_b64)
+    return render_template('grafico_simple.html', titulo="Histograma de Magnitudes", 
+                           imagen=visualizaciones.plot_histograma_magnitud())
 
 @app.route('/grafico/correlacion')
 def grafico_correlacion():
-    # Generamos dos gráficos para esta vista
-    scatter_b64 = visualizaciones.plot_scatter_profundidad_mag()
-    heatmap_b64 = visualizaciones.plot_matriz_correlacion()
-    
-    # Podrías crear un template 'grafico_doble.html' o reutilizar el simple mostrando dos imgs
-    # Aquí asumo que usas grafico_doble.html que te pasé antes
-    return render_template('grafico_doble.html', 
-                           titulo="Análisis de Correlación", 
-                           img1=scatter_b64, 
-                           img2=heatmap_b64)
+    return render_template('grafico_doble.html', titulo="Correlación Magnitud/Profundidad",
+                           img1=visualizaciones.plot_scatter_profundidad_mag(),
+                           img2=visualizaciones.plot_matriz_correlacion())
 
-@app.route('/comparacion/continentes')
+@app.route('/comparacion/continentes') # [cite: 72]
 def comparacion_continentes():
-    boxplot_b64 = visualizaciones.plot_boxplot_comparativo()
-    
-    return render_template('grafico_simple.html', 
-                           titulo="Comparación Regional", 
-                           descripcion="Variabilidad de la magnitud en las regiones más activas.",
-                           imagen=boxplot_b64)
+    return render_template('grafico_simple.html', titulo="Comparación por Continentes", 
+                           imagen=visualizaciones.plot_comparacion_continentes())
 
-@app.route('/mapa/mundial')
+# --- MAPAS (Folium, Plotly, Leaflet) ---
+@app.route('/mapa/mundial') # Folium [cite: 71]
 def mapa_mundial():
-    # Esto devuelve el HTML crudo del mapa
-    mapa_html = visualizaciones.mapa_interactivo()
-    
-    return render_template('mapa.html', mapa=mapa_html)
+    return render_template('mapa.html', mapa=visualizaciones.mapa_folium())
 
-# =============================================================================
-# ETAPA 4: MODELOS ANALÍTICOS
-# =============================================================================
+@app.route('/mapa/plotly') # Plotly
+def mapa_plotly_route():
+    return render_template('mapa_plotly.html', mapa_div=visualizaciones.mapa_plotly())
 
+@app.route('/mapa/leaflet') # Leaflet (consume API)
+def mapa_leaflet_route():
+    return render_template('mapa_leaflet.html')
+
+# --- API JSON (Para Leaflet) [cite: 67] ---
+@app.route('/api/datos_sismos')
+def api_sismos():
+    df = analisis.cargar_datos()
+    if df is None: return jsonify([])
+    # Retornamos los 100 sismos más fuertes para no saturar JS
+    top = df.nlargest(100, 'mag')[['latitude', 'longitude', 'mag', 'place']]
+    return jsonify(top.to_dict(orient='records'))
+
+# --- MODELOS (Etapa 4) [cite: 76] ---
 @app.route('/modelos')
 def modelos():
-    # Llamamos a la lógica matemática en analisis.py
-    datos_regresion = analisis.modelo_regresion_lineal()
-    datos_clustering = analisis.modelo_clustering_kmeans()
-    
     return render_template('modelos.html', 
-                           regresion=datos_regresion, 
-                           centroides=datos_clustering)
+                           regresion=analisis.modelo_regresion_lineal(),
+                           centroides=analisis.modelo_clustering_kmeans())
 
-# =============================================================================
-# INICIO DE LA APP
-# =============================================================================
 if __name__ == '__main__':
-    # debug=True permite que los cambios se vean sin reiniciar el servidor
     app.run(debug=True, port=5000)

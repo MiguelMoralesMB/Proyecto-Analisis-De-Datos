@@ -2,3 +2,4 @@
 *.CSV
 *.parquet
 env/    
+__pycache__

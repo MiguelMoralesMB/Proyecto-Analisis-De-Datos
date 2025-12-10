@@ -1,29 +1,20 @@
 <!DOCTYPE html>
 <html>
-<head><title>Modelos Analíticos</title></head>
 <body style="font-family: sans-serif; padding: 20px;">
-    <h1>Etapa 4: Modelos y Conclusiones</h1>
+    <h1>Etapa 4: Modelos</h1>
+    
+    <h3>1. Regresión Lineal (Depth -> Mag)</h3>
+    <ul>
+        <li>R2 Score: {{ regresion.r2_score }}</li>
+        <li>Coeficiente: {{ regresion.coeficiente }}</li>
+    </ul>
 
-    <div style="background: #f4f4f4; padding: 15px; margin-bottom: 20px;">
-        <h2>1. Regresión Lineal (Magnitud vs Profundidad)</h2>
-        <p>Intentamos predecir la magnitud basándonos en la profundidad.</p>
-        <ul>
-            <li><strong>R² Score (Precisión):</strong> {{ regresion.r2_score | round(4) }}</li>
-            <li><strong>Coeficiente:</strong> {{ regresion.coeficiente | round(4) }}</li>
-        </ul>
-        <p><em>Conclusión:</em> Si el R² es cercano a 0, no existe relación lineal fuerte entre profundidad y magnitud.</p>
-    </div>
-
-    <div style="background: #e8f4f8; padding: 15px;">
-        <h2>2. Clustering (K-Means)</h2>
-        <p>Centros geográficos detectados (Latitud, Longitud):</p>
-        <ul>
-            {% for centro in centroides %}
-                <li>Cluster: {{ centro[0] | round(2) }}, {{ centro[1] | round(2) }}</li>
-            {% endfor %}
-        </ul>
-    </div>
-    <br>
-    <a href="/">Volver al Inicio</a>
+    <h3>2. Clustering (Centroides Geográficos)</h3>
+    <ul>
+        {% for c in centroides %}
+            <li>Lat: {{ c[0] | round(2) }}, Lon: {{ c[1] | round(2) }}</li>
+        {% endfor %}
+    </ul>
+    <a href="/">Volver</a>
 </body>
 </html>
